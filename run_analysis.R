@@ -1,7 +1,7 @@
 
-# Instructions ------------------------------------------------------------
+# Description ------------------------------------------------------------
 
-# create script called "run_analysis.R" that:
+# this script does the following:
 # 1) merges training and test sets to create one data set
 # 2) extracts only the mean and std deviation for each measurement
 # 3) uses descriptive activity names to name activities in the data set
@@ -12,7 +12,8 @@
 library(tidyverse)
 library(data.table)
 
-# read data into R ---------------------------------------------------
+
+# Read data in and merge training -----------------------------------------
 
 # read in the separate training and test data sets
 traindata <- fread("./UCI HAR Dataset/train/X_train.txt")
@@ -33,13 +34,16 @@ testdata <- cbind(testdata, testlabel, testidentifier)
 # combine the training and test data
 activitydata <- rbind(traindata, testdata)
 
+
+# "Clean" and select relevant merged data -----------------------------------
+
 # features are the column names of the measured variables. read in the feature
-# names (unlist to get a vector instead of data table). Also add a descriptive
-# column names for columns that contain 
+# names (unlist to get a vector instead of data table). Also add descriptive
+# column names for columns that contain subject and activity identifiers.
 featurenames <- unlist(fread("./UCI HAR Dataset/features.txt", select = 2))
 featurenames[562:563] <- c("activity", "subject")
 
-# name the columns of the merged data set
+# rename the columns of the merged data set
 names(activitydata) <- featurenames
 
 # free up work space
@@ -53,19 +57,12 @@ activitydata <-
         activitydata %>% 
         select(matches("-mean()|-std()"), activity, subject) %>% 
         mutate(activity = recode(activitydata[, activity],
-                                      "1" = "walking", 
-                                      "2" = "walking_upstairs",
-                                      "3" = "walking_downstairs", 
-                                      "4" = "sitting", "5" = "standing", 
-                                      "6" = "laying"))
-
-activitydata %>% 
-        group_by(subject, activity) %>%
-        summarize_all() 
-# ct here, we still need to check documentation and what function works for
-# applying a transformation to multiple columns whilst considering the group_by
-# argument
-        
-        
+                                 "1" = "walking", 
+                                 "2" = "walking_upstairs",
+                                 "3" = "walking_downstairs", 
+                                 "4" = "sitting", "5" = "standing", 
+                                 "6" = "laying"))
 
 
+# create tidy dataset with averages by activity, by subject ---------------
+tidyavgs <- activitydata[, lapply(.SD, mean), keyby = .(subject, activity)]
